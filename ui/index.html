@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SPARQL Endpoint — Fuseki</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f1117;
+      color: #e2e4f0;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1d27;
+      border-bottom: 1px solid #2d3148;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    header h1 { font-size: 1.25rem; font-weight: 600; }
+    .badge {
+      background: rgba(251,146,60,.15);
+      color: #fb923c;
+      border: 1px solid rgba(251,146,60,.3);
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    #status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #8b8fa8;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+    #status-dot.ok  { background: #34d399; }
+    #status-dot.err { background: #f87171; }
+    #status-label { color: #8b8fa8; font-size: 0.8rem; }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    .card {
+      background: #1a1d27;
+      border: 1px solid #2d3148;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .card-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid #2d3148;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .card-header h2 {
+      font-size: 0.85rem; font-weight: 600;
+      color: #8b8fa8; text-transform: uppercase; letter-spacing: .06em;
+    }
+    .card-body { padding: 20px; }
+
+    /* Endpoint selector */
+    .endpoint-row {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      font-size: 0.85rem; color: #8b8fa8;
+    }
+    #endpoint-url {
+      flex: 1; min-width: 260px;
+      background: #0c0e16;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      padding: 7px 12px;
+      color: #e2e4f0;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.82rem;
+      outline: none;
+    }
+    #endpoint-url:focus { border-color: #fb923c; }
+
+    .examples { display: flex; flex-wrap: wrap; gap: 8px; }
+    .example-btn {
+      background: rgba(251,146,60,.1);
+      border: 1px solid rgba(251,146,60,.25);
+      color: #fb923c;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .example-btn:hover { background: rgba(251,146,60,.2); }
+
+    #query {
+      width: 100%; min-height: 200px;
+      background: #0c0e16;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      padding: 14px 16px;
+      color: #e2e4f0;
+      font-family: "JetBrains Mono", "Fira Code", monospace;
+      font-size: 0.85rem;
+      line-height: 1.65;
+      resize: vertical; outline: none;
+      display: block; margin-bottom: 14px;
+    }
+    #query:focus { border-color: #fb923c; }
+
+    .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      border: none; border-radius: 7px;
+      padding: 9px 20px; font-size: 0.88rem; font-weight: 600; cursor: pointer;
+    }
+    .btn-primary { background: #fb923c; color: #fff; }
+    .btn-primary:hover { opacity: .88; }
+    .btn-secondary { background: #2d3148; color: #e2e4f0; }
+    .btn-secondary:hover { opacity: .78; }
+
+    #spinner {
+      display: none; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.2);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .time-label { margin-left: auto; color: #8b8fa8; font-size: 0.8rem; }
+
+    .results-meta { display: flex; align-items: center; gap: 14px; font-size: 0.82rem; color: #8b8fa8; }
+    .type-tag {
+      background: rgba(167,139,250,.12); color: #a78bfa;
+      border: 1px solid rgba(167,139,250,.25);
+      border-radius: 4px; padding: 1px 8px;
+      font-size: 0.74rem; font-weight: 700;
+    }
+    .row-count { color: #34d399; font-weight: 600; }
+    #export-csv {
+      margin-left: auto; background: transparent;
+      border: 1px solid #2d3148; color: #8b8fa8;
+      border-radius: 6px; padding: 4px 12px;
+      font-size: 0.78rem; cursor: pointer;
+    }
+    #export-csv:hover { border-color: #34d399; color: #34d399; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    th {
+      background: rgba(251,146,60,.08); color: #fb923c;
+      text-align: left; padding: 9px 14px;
+      font-weight: 600; font-size: 0.78rem;
+      text-transform: uppercase; letter-spacing: .05em;
+      border-bottom: 1px solid #2d3148; white-space: nowrap;
+    }
+    td {
+      padding: 8px 14px;
+      border-bottom: 1px solid rgba(45,49,72,.6);
+      word-break: break-all; color: #e2e4f0;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.8rem; max-width: 420px;
+    }
+    tr:hover td { background: rgba(251,146,60,.04); }
+    td a { color: #fb923c; text-decoration: none; }
+    td a:hover { text-decoration: underline; }
+
+    pre#raw-output {
+      background: #0c0e16; border: 1px solid #2d3148;
+      border-radius: 8px; padding: 16px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.8rem; line-height: 1.6; color: #e2e4f0;
+      white-space: pre-wrap; word-break: break-all; overflow-x: auto;
+    }
+
+    .ask-result { font-size: 1.4rem; font-weight: 700; padding: 20px 0; }
+    .ask-true  { color: #34d399; }
+    .ask-false { color: #f87171; }
+
+    .error-msg {
+      background: rgba(248,113,113,.1);
+      border: 1px solid rgba(248,113,113,.3);
+      color: #f87171; border-radius: 8px;
+      padding: 14px 18px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.82rem; white-space: pre-wrap;
+    }
+
+    .placeholder { color: #8b8fa8; text-align: center; padding: 40px 20px; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <circle cx="14" cy="14" r="13" stroke="#fb923c" stroke-width="1.5"/>
+    <path d="M8 14h12M14 8l6 6-6 6" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <h1>SPARQL Endpoint</h1>
+  <span class="badge">Apache Jena Fuseki</span>
+  <div id="status-dot"></div>
+  <span id="status-label">Checking…</span>
+</header>
+
+<main>
+
+  <!-- Endpoint config -->
+  <div class="card">
+    <div class="card-header"><h2>Endpoint</h2></div>
+    <div class="card-body">
+      <div class="endpoint-row">
+        <span>SPARQL URL:</span>
+        <input id="endpoint-url" type="text" value="http://localhost:3030/ds/sparql" />
+        <button class="btn btn-secondary" onclick="checkStatus()">Test connection</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Examples -->
+  <div class="card">
+    <div class="card-header"><h2>Example Queries</h2></div>
+    <div class="card-body">
+      <div class="examples" id="examples"></div>
+    </div>
+  </div>
+
+  <!-- Editor -->
+  <div class="card">
+    <div class="card-header"><h2>SPARQL Query</h2></div>
+    <div class="card-body">
+      <textarea id="query" spellcheck="false" placeholder="Write your SPARQL query here…"></textarea>
+      <div class="controls">
+        <button class="btn btn-primary" onclick="runQuery()">
+          <div id="spinner"></div>
+          <span id="run-label">▶ Run Query</span>
+        </button>
+        <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
+        <span class="time-label" id="time-label"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results — always visible -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Results</h2>
+      <div class="results-meta">
+        <span class="type-tag" id="res-type"></span>
+        <span class="row-count" id="res-count"></span>
+        <button id="export-csv" onclick="exportCSV()"></button>
+      </div>
+    </div>
+    <div class="card-body" id="results-body">
+      <div class="placeholder">Run a query to see results</div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── Examples ───────────────────────────────────────────────────────────────
+const EXAMPLES = [
+  { label: "All triples (limit 50)",
+    query: `SELECT ?subject ?predicate ?object\nWHERE { ?subject ?predicate ?object }\nLIMIT 50` },
+  { label: "All classes",
+    query: `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nSELECT DISTINCT ?class\nWHERE { ?s rdf:type ?class }\nORDER BY ?class` },
+  { label: "All properties",
+    query: `SELECT DISTINCT ?property\nWHERE { ?s ?property ?o }\nORDER BY ?property` },
+  { label: "Labels & comments",
+    query: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nSELECT ?subject ?label ?comment\nWHERE {\n  ?subject rdfs:label ?label .\n  OPTIONAL { ?subject rdfs:comment ?comment }\n}\nORDER BY ?label` },
+  { label: "CONSTRUCT subgraph",
+    query: `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nCONSTRUCT { ?s rdf:type ?type }\nWHERE { ?s rdf:type ?type }\nLIMIT 20` },
+  { label: "ASK — has any triple?",
+    query: `ASK { ?s ?p ?o }` },
+  { label: "Count all triples",
+    query: `SELECT (COUNT(*) AS ?total)\nWHERE { ?s ?p ?o }` },
+];
+
+document.getElementById("examples").innerHTML = EXAMPLES.map((e, i) =>
+  `<button class="example-btn" onclick="setExample(${i})">${e.label}</button>`
+).join("");
+
+function setExample(i) {
+  document.getElementById("query").value = EXAMPLES[i].query;
+}
+
+// ── Status check ───────────────────────────────────────────────────────────
+async function checkStatus() {
+  const dot   = document.getElementById("status-dot");
+  const label = document.getElementById("status-label");
+  dot.className = "";
+  label.textContent = "Checking…";
+  try {
+    const res = await fetch("http://localhost:3030/$/ping", { signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      dot.className = "ok";
+      label.textContent = "Fuseki is running";
+    } else {
+      throw new Error("HTTP " + res.status);
+    }
+  } catch (e) {
+    dot.className = "err";
+    label.textContent = "Cannot reach Fuseki — is Docker running?";
+  }
+}
+checkStatus();
+
+// ── Query ──────────────────────────────────────────────────────────────────
+let lastData = null;
+
+function setResults(html) {
+  document.getElementById("results-body").innerHTML = html;
+}
+
+async function runQuery() {
+  const query       = document.getElementById("query").value.trim();
+  const endpointUrl = document.getElementById("endpoint-url").value.trim();
+  if (!query) return;
+
+  document.getElementById("spinner").style.display = "block";
+  document.getElementById("run-label").textContent  = "Running…";
+  document.getElementById("res-type").textContent   = "";
+  document.getElementById("res-count").textContent  = "";
+  document.getElementById("export-csv").textContent = "";
+  document.getElementById("time-label").textContent = "";
+  setResults('<div class="placeholder">Running query…</div>');
+  lastData = null;
+
+  const t0 = performance.now();
+  try {
+    const res = await fetch(endpointUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/sparql-results+json, application/rdf+xml;q=0.9, text/turtle;q=0.8, */*;q=0.1"
+      },
+      body: "query=" + encodeURIComponent(query)
+    });
+
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(3);
+    document.getElementById("time-label").textContent = elapsed + "s";
+
+    if (!res.ok) {
+      const text = await res.text();
+      setResults(`<div class="error-msg">HTTP ${res.status}: ${escHtml(text)}</div>`);
+      return;
+    }
+
+    const contentType = res.headers.get("content-type") || "";
+
+    // SELECT / ASK → JSON
+    if (contentType.includes("sparql-results+json")) {
+      const data = await res.json();
+      lastData = data;
+
+      if (data.boolean !== undefined) {
+        // ASK
+        document.getElementById("res-type").textContent = "ASK";
+        const cls   = data.boolean ? "ask-true" : "ask-false";
+        const label = data.boolean ? "✔ TRUE"   : "✘ FALSE";
+        setResults(`<div class="ask-result ${cls}">${label}</div>`);
+
+      } else if (data.results) {
+        // SELECT
+        const vars = data.head.vars;
+        const rows = data.results.bindings;
+        document.getElementById("res-type").textContent  = "SELECT";
+        document.getElementById("res-count").textContent = rows.length + " row" + (rows.length !== 1 ? "s" : "");
+        document.getElementById("export-csv").textContent = rows.length ? "⬇ Export CSV" : "";
+
+        if (!rows.length) {
+          setResults('<div class="placeholder">No results</div>');
+          return;
+        }
+
+        const thead = "<tr>" + vars.map(v => `<th>${escHtml(v)}</th>`).join("") + "</tr>";
+        const tbody = rows.map(row =>
+          "<tr>" + vars.map(v => {
+            const cell = row[v];
+            if (!cell) return "<td></td>";
+            const val  = cell.value;
+            const type = cell.type;
+            if (type === "uri") {
+              return `<td><a href="${escHtml(val)}" target="_blank" rel="noopener">${escHtml(val)}</a></td>`;
+            }
+            if (type === "literal" && cell["xml:lang"]) {
+              return `<td>${escHtml(val)} <small style="color:#8b8fa8">@${cell["xml:lang"]}</small></td>`;
+            }
+            return `<td>${escHtml(val)}</td>`;
+          }).join("") + "</tr>"
+        ).join("");
+
+        setResults(`<div class="table-wrap"><table><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`);
+      }
+
+    // CONSTRUCT / DESCRIBE → Turtle or RDF/XML as raw text
+    } else {
+      const text = await res.text();
+      document.getElementById("res-type").textContent = "CONSTRUCT / DESCRIBE";
+      setResults(`<pre id="raw-output">${escHtml(text)}</pre>`);
+    }
+
+  } catch (e) {
+    setResults(`<div class="error-msg">Network error: ${escHtml(e.message)}\n\nIs Fuseki running at ${escHtml(endpointUrl)}?</div>`);
+  } finally {
+    document.getElementById("spinner").style.display = "none";
+    document.getElementById("run-label").textContent  = "▶ Run Query";
+  }
+}
+
+// ── Clear ──────────────────────────────────────────────────────────────────
+function clearAll() {
+  document.getElementById("query").value             = "";
+  document.getElementById("res-type").textContent   = "";
+  document.getElementById("res-count").textContent  = "";
+  document.getElementById("export-csv").textContent = "";
+  document.getElementById("time-label").textContent = "";
+  lastData = null;
+  setResults('<div class="placeholder">Run a query to see results</div>');
+}
+
+// ── CSV Export ─────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (!lastData || !lastData.results) return;
+  const vars = lastData.head.vars;
+  const rows = lastData.results.bindings;
+  const lines = [vars, ...rows.map(r => vars.map(v => r[v]?.value ?? ""))];
+  const csv   = lines.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a = Object.assign(document.createElement("a"), {
+    href: "data:text/csv;charset=utf-8," + encodeURIComponent(csv),
+    download: "sparql-results.csv"
+  });
+  a.click();
+}
+
+// ── Keyboard shortcut ──────────────────────────────────────────────────────
+document.getElementById("query").addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runQuery(); }
+});
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+</script>
+</body>
+</html>

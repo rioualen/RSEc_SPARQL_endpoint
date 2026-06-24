@@ -1,0 +1,24 @@
+services:
+  fuseki:
+    build: .
+    ports:
+      - "3030:3030"
+    volumes:
+      # Mount your RDF files here (read-only)
+      - ./data:/rdf-data:ro
+      # Persist the TDB2 database across restarts
+      - fuseki-db:/fuseki/databases
+    environment:
+      DATA_DIR: /rdf-data
+      JVM_ARGS: "-Xmx4g"   # Increase for large datasets
+      RELOAD: "0"           # Set to "1" to re-import RDF files on next startup
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3030/$/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  fuseki-db:
