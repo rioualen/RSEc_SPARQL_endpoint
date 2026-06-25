@@ -1,46 +1,55 @@
 # SPARQL Endpoint — Apache Jena Fuseki
 
-A SPARQL endpoint for querying RDF files using **Apache Jena Fuseki**, served via **Docker**. Includes a standalone web UI.
-
-## Features
-
-- Loads all RDF files from `./data/` into a persistent **TDB2** database at startup
-- Full SPARQL 1.1 support (SELECT, ASK, CONSTRUCT, DESCRIBE, UPDATE)
-- Persistent TDB2 store — fast restarts, no re-parsing on every boot
-- Standalone HTML web UI (no server needed — open directly in browser)
-- CSV export, URI linking, language tag display
-- `Ctrl+Enter` to run queries
-
----
+A SPARQL 1.1 endpoint for querying RDF files using **Apache Jena Fuseki** (`stain/jena-fuseki`), served via **Docker**.
 
 ## Quickstart
 
 ### 1 — Add your RDF files
 
-```
-data/
-  my_tools.ttl
-  ontology.rdf
-  ...
-```
-
-Supported formats: `.ttl`, `.turtle`, `.rdf`, `.xml`, `.n3`, `.nt`, `.jsonld`, `.trig`
+Drop your files in `data/`. Supported formats: `.ttl`, `.rdf`, `.nt`, `.owl`, `.nquads`
 
 ### 2 — Start Fuseki
 
 ```bash
-docker compose up --build
+docker compose up -d
 ```
 
-Fuseki will load all RDF files into TDB2 on first run, then start.
+Wait ~10 seconds for Fuseki to finish initialising (watch logs with `docker compose logs -f`).
 
-### 3 — Open the web UI
+### 3 — Load your RDF files
 
-Open `ui/index.html` directly in your browser — no server needed. It talks to Fuseki at `http://localhost:3030/ds/sparql`.
+Run the loader once. Files in `./data/` are mounted at `/staging` inside the container:
 
-You can also use Fuseki's built-in UI at:
+```bash
+./load.sh
 ```
-http://localhost:3030
+
+This calls the image's built-in `tdbloader2` to bulk-load all files into the TDB2 `ds` dataset.
+
+### 4 — Query
+
+Open the web UI:
+```
+ui/index.html    ← open directly in your browser
+```
+
+Or use Fuseki's built-in UI:
+```
+http://localhost:3030    (login: admin / admin)
+```
+
+---
+
+## Re-loading after adding files
+
+```bash
+# Add new files to data/, then re-run the loader
+./load.sh
+
+# If you want a clean reload from scratch:
+docker compose down -v
+docker compose up -d
+./load.sh
 ```
 
 ---
@@ -49,44 +58,26 @@ http://localhost:3030
 
 ```
 .
-├── config/
-│   └── config.ttl        # Fuseki dataset configuration
-├── data/                 # ← Put your RDF files here
+├── data/             ← Put your RDF files here
 │   └── example.ttl
 ├── ui/
-│   └── index.html        # Standalone web form UI
-├── entrypoint.sh         # Loads RDF → TDB2, then starts Fuseki
-├── Dockerfile
+│   └── index.html    ← Standalone web UI (open in browser)
+├── load.sh           ← Helper: loads ./data/ into Fuseki TDB2
 ├── docker-compose.yml
 └── README.md
 ```
 
 ---
 
-## Re-importing RDF files
-
-The TDB2 database is persisted in a Docker volume (`fuseki-db`). Files are only loaded once. To re-import after adding or changing files:
-
-```bash
-# Option A: set RELOAD=1 for one restart
-RELOAD=1 docker compose up
-
-# Option B: wipe the volume and rebuild
-docker compose down -v
-docker compose up --build
-```
-
----
-
 ## SPARQL Endpoints
 
-| Endpoint | URL |
-|----------|-----|
-| Query (GET/POST) | `http://localhost:3030/ds/sparql` |
-| Update | `http://localhost:3030/ds/update` |
-| Graph Store | `http://localhost:3030/ds/data` |
-| Fuseki UI | `http://localhost:3030` |
-| Ping | `http://localhost:3030/$/ping` |
+| Endpoint    | URL                                    |
+|-------------|----------------------------------------|
+| Query       | `http://localhost:3030/ds/sparql`      |
+| Update      | `http://localhost:3030/ds/update`      |
+| Graph Store | `http://localhost:3030/ds/data`        |
+| Fuseki UI   | `http://localhost:3030`                |
+| Ping        | `http://localhost:3030/$/ping`         |
 
 ### Example curl
 
@@ -100,27 +91,9 @@ curl -X POST http://localhost:3030/ds/sparql \
 
 ## Configuration
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATA_DIR` | `/rdf-data` | Path to RDF files inside container |
-| `JVM_ARGS` | `-Xmx2g` | JVM heap — increase for large datasets |
-| `RELOAD` | `0` | Set to `1` to force re-import on next startup |
-
-For very large datasets, increase `JVM_ARGS` in `docker-compose.yml`:
-```yaml
-environment:
-  JVM_ARGS: "-Xmx8g"
-```
-
----
-
-## Comparison with the Flask/RDFLib version
-
-| | Flask + RDFLib | Jena Fuseki |
-|---|---|---|
-| Language | Python | Java |
-| Storage | In-memory | TDB2 (persistent, indexed) |
-| Query speed | Slower on large graphs | Much faster |
-| SPARQL support | 1.1 SELECT/ASK/CONSTRUCT | Full 1.1 + UPDATE |
-| Restart time | Re-parses all files | Instant (TDB2 persisted) |
-| Best for | Small datasets, quick setup | Large datasets, production |
+| Variable           | Default  | Description                            |
+|--------------------|----------|----------------------------------------|
+| `ADMIN_PASSWORD`   | `admin`  | Fuseki admin UI password               |
+| `FUSEKI_DATASET_1` | `ds`     | Dataset name                           |
+| `TDB`              | `2`      | TDB version (2 = TDB2, recommended)    |
+| `JVM_ARGS`         | `-Xmx4g` | JVM heap — increase for large datasets |
