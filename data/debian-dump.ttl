@@ -3,7 +3,7 @@
 @prefix debianmed: <https://salsa.debian.org/med-team/> .
 @prefix edam: <http://edamontology.org/> .
 @prefix guix: <https://packages.guix.gnu.org/packages/> .
-@prefix schema: <https://schema.org/> .
+@prefix schema: <http://schema.org/> .
 @prefix scicrunch: <https://scicrunch.org/resolver/> .
 
 debianmed:abyss a schema:SoftwareApplication ;

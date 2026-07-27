@@ -1,6 +1,6 @@
 @prefix bioconda: <https://github.com/bioconda/bioconda-recipes/tree/master/recipes/> .
 @prefix biotools: <https://bio.tools/> .
-@prefix schema: <https://schema.org/> .
+@prefix schema: <http://schema.org/> .
 
 bioconda:aacon a schema:SoftwareApplication ;
     schema:description "AACon: A Fast Amino Acid Conservation Calculation Service" ;

@@ -3,7 +3,7 @@
 @prefix edam: <http://edamontology.org/> .
 @prefix galaxytool: <https://github.com/galaxyproject/tools-iuc/tree/master/tools/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix schema: <https://schema.org/> .
+@prefix schema: <http://schema.org/> .
 
 galaxytool:AMRFinderPlus a schema:SoftwareApplication ;
     schema:applicationSubCategory edam:topic_3301,

@@ -1,5 +1,5 @@
 @prefix edam: <http://edamontology.org/> .
-@prefix schema: <https://schema.org/> .
+@prefix schema: <http://schema.org/> .
 
 <https://usegalaxy.cz/published/workflow?id=1082e5b455f8f814> a schema:ComputationalWorkflow ;
     schema:citation "" ;
