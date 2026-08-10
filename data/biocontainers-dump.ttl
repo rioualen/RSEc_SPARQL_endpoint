@@ -1,6 +1,6 @@
 @prefix biocontainers: <https://biocontainers.pro/tools/> .
 @prefix biotools: <https://bio.tools/> .
-@prefix schema: <http://schema.org/> .
+@prefix schema: <https://schema.org/> .
 
 biocontainers:2pg_cartesian a schema:SoftwareApplication ;
     schema:description "2pg cartesian is a framework of optimization algorithms for protein structure prediction" ;
